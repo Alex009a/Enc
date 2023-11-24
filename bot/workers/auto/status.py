@@ -7,6 +7,7 @@ from bot.fun.quotes import enquotes
 from bot.fun.stuff import lvbar
 from bot.utils.ani_utils import qparse
 from bot.utils.batch_utils import get_batch_list
+from bot.utils.bot_utils import BATCH_QUEUE as bqueue
 from bot.utils.bot_utils import QUEUE as queue
 from bot.utils.bot_utils import encode_info, get_codec, get_pause_status
 from bot.utils.log_utils import logger
@@ -89,18 +90,47 @@ async def stateditor(x, channel, id):
 
 async def autostat():
     if forward and forward_id:
-        check = []
+
+        class Check:
+            def __init__(self):
+                self.batch = {}
+                self.done = False
+                self.file = None
+                self.queue = {}
+                self.state = None
+
+        check = Check()
+
+        def conditions():
+            return (
+                queue == check.queue
+                and bqueue == check.batch
+                and check.file == encode_info._current
+                and check.state == (get_pause_status() == 0)
+            )
+
+        def wait():
+            if conditions():
+                return True
+            check.batch.clear(), check.batch.update(bqueue)
+            check.queue.clear(), check.queue.update(queue)
+            check.file = encode_info._current
+            check.state = get_pause_status() == 0
+            return False
+
         while forward_id:
             if not queue:
-                if check:
+                if check.done:
                     await asyncio.sleep(60)
                     continue
-                check.append(1)
+                check.done = True
 
             else:
-                check.clear() if check else None
+                if check.done:
+                    check.done = False
             if startup_:
-                estat = await encodestat()
+                if not wait():
+                    estat = await encodestat()
             else:
                 estat = f"**{enquip4()} {enmoji()}**"
             await stateditor(estat, forward, forward_id)
