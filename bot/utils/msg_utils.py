@@ -9,7 +9,7 @@ from bot.fun.quips import enquip3
 from bot.fun.quotes import enquotes
 from bot.others.exceptions import ArgumentParserError
 
-from .bot_utils import gfn, is_url, var
+from .bot_utils import gfn, is_url, sync_to_async, var
 from .log_utils import log, logger
 from .os_utils import s_remove
 
@@ -307,6 +307,7 @@ async def report_encode_status(
     msg_2_delete=None,
     log_msg=None,
     pyro_msg=False,
+    exe_prefix="ffmpeg",
 ):
     _dir, file = os.path.split(file)
     if msg_2_delete:
@@ -350,7 +351,7 @@ async def report_encode_status(
         error = None
         msg_2_delete = msg_2_delete or msg
         if len(er) > 4095 and not cancelled:
-            out_file = "ffmpeg_error.txt"
+            out_file = f"{exe_prefix}_error.txt"
             with open(out_file, "w") as file:
                 file.write(er)
             error = await msg_2_delete.reply(
@@ -365,8 +366,6 @@ async def report_encode_status(
             log(er)
         if error and log_msg:
             await log_msg.reply(error)
-        # if uri:
-        # rm_leech_file(download.uri_gid)
     else:
         reply = f"**{_is}** "
         if file:
@@ -427,9 +426,9 @@ async def get_message_from_link(link, pyrogram=True):
 
 async def enquoter(msg, rply):
     try:
-        quotes = await enquotes()
+        quotes = await sync_to_async(enquotes)
         await rply.edit(f"**{msg}**\n\n~while you wait~\n\n{quotes}")
-        await asyncio.sleep(5)
+        await asyncio.sleep(1.5)
     except Exception:
         await logger(Exception)
 
