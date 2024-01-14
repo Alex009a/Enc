@@ -1,11 +1,10 @@
 import pickle
 
-import requests
 from pymongo import MongoClient
 
 from bot import *
-from bot.config import *
-from bot.utils.bot_utils import var
+from bot.config import conf
+from bot.utils.bot_utils import create_api_token, var
 from bot.utils.local_db_utils import load_local_db
 from bot.utils.os_utils import file_exists
 
@@ -16,24 +15,41 @@ uptime = dt.now()
 global aria2
 aria2 = None
 
+LOGS.info("=" * 30)
+LOGS.info(f"Python version: {sys.version.split()[0]}")
 
-if THUMB:
-    os.system(f"wget {THUMB} -O thumb.jpg")
+vmsg = f"Warning: {version_file} is missing!"
+if file_exists(version_file):
+    with open(version_file, "r") as file:
+        ver = file.read().strip()
+    vmsg = f"Bot version: {ver}"
 
-if DL_STUFF:
-    for link in DL_STUFF.split(","):
+LOGS.info(vmsg)
+LOGS.info("=" * 30)
+
+if conf.THUMB:
+    os.system(f"wget {conf.THUMB} -O thumb.jpg")
+
+if conf.DL_STUFF:
+    for link in conf.DL_STUFF.split(","):
         os.system(f"wget {link.strip()}")
 
-if NO_TEMP_PM:
+if conf.DL_STUFF:
     TEMP_ONLY_IN_GROUP.append(1)
 
 if not file_exists(ffmpeg_file):
     with open(ffmpeg_file, "w") as file:
-        file.write(str(FFMPEG) + "\n")
+        file.write(str(conf.FFMPEG) + "\n")
 
-if not file_exists(mux_file) and MUX_ARGS:
+if not file_exists(mux_file) and conf.MUX_ARGS:
     with open(mux_file, "w") as file:
-        file.write(str(MUX_ARGS) + "\n")
+        file.write(str(conf.MUX_ARGS) + "\n")
+
+if not conf.USE_ANILIST:
+    Path("NO_PARSE").touch()
+
+if not conf.USE_CAPTION:
+    Path("NO_CAPTION").touch()
 
 if not os.path.isdir("downloads/"):
     os.mkdir("downloads/")
@@ -52,9 +68,9 @@ if not os.path.isdir("thumb/"):
 if os.path.isdir("/tgenc"):
     DOCKER_DEPLOYMENT.append(1)
 
-if TEMP_USER:
-    for t in TEMP_USER.split():
-        if t in OWNER.split():
+if conf.TEMP_USER:
+    for t in conf.TEMP_USER.split():
+        if t in conf.OWNER.split():
             continue
         if t not in TEMP_USERS:
             TEMP_USERS.append(t)
@@ -74,7 +90,7 @@ def load_db(_db, _key, var, var_type=None):
 
     if var_type == "list":
         for item in out.split():
-            if item in OWNER.split():
+            if item in conf.OWNER.split():
                 continue
             if item not in var:
                 var.append(item)
@@ -85,9 +101,9 @@ def load_db(_db, _key, var, var_type=None):
             file.write(out + "\n")
 
 
-if DATABASE_URL:
-    cluster = MongoClient(DATABASE_URL)
-    db = cluster[DBNAME]
+if conf.DATABASE_URL:
+    cluster = MongoClient(conf.DATABASE_URL)
+    db = cluster[conf.DBNAME]
     queuedb = db["queue"]
     ffmpegdb = db["code"]
     filterdb = db["filter"]
@@ -111,26 +127,12 @@ else:
 
 No_Flood = {}
 
-retries = 10
-telgrph_tkn_err_msg = (
-    "Couldn't not successfully create api token required by telegraph to work"
-    "\nAs such telegraph is therefore disabled!"
-)
-while retries:
-    try:
-        tgp_client.create_api_token("Mediainfo")
-        break
-    except (requests.exceptions.ConnectionError, ConnectionError) as e:
-        retries -= 1
-        if not retries:
-            LOGS.info(telgrph_tkn_err_msg)
-            break
-        time.sleep(1)
+create_api_token()
 
 
 class EnTimer:
     def __init__(self):
-        self.ind_pause = LOCK_ON_STARTUP
+        self.ind_pause = conf.LOCK_ON_STARTUP
         self.time = 0
         self.msg = None
 

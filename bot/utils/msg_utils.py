@@ -3,7 +3,7 @@ from functools import partial
 import pyrogram
 
 from bot import *
-from bot.config import *
+from bot.config import conf
 from bot.fun.emojis import enmoji, enmoji2
 from bot.fun.quips import enquip3
 from bot.fun.quotes import enquotes
@@ -19,22 +19,22 @@ globals().update({n: getattr(var, n) for n in attrs if not n.startswith("_")})
 
 def user_is_allowed(user: str | int):
     user = str(user)
-    return user in OWNER or user in TEMP_USERS
+    return user in conf.OWNER or user in TEMP_USERS
 
 
 def user_is_owner(user: str | int):
     user = str(user)
-    return user in OWNER
+    return user in conf.OWNER
 
 
 def user_is_dev(user):
     user = int(user)
-    return user == DEV
+    return user == conf.DEV
 
 
 def pm_is_allowed(in_group=False, in_pm=False):
     if in_pm:
-        return not NO_TEMP_PM
+        return not conf.NO_TEMP_PM
     if in_group:
         return TEMP_ONLY_IN_GROUP
 
@@ -51,11 +51,16 @@ def turn(turn_id: str = None):
 
 
 async def wait_for_turn(turn_id: str, msg):
-    while R_QUEUE:
+    cancel_button = InlineKeyboardButton(
+        text=f"Cancel", callback_data=f"cancel_turn {turn_id}"
+    )
+    reply_markup = InlineKeyboardMarkup([[cancel_button]])
+    await msg.edit_reply_markup(reply_markup=reply_markup)
+    while turn(turn_id):
         await asyncio.sleep(5)
         if R_QUEUE[0] == turn_id:
             await msg.delete()
-            break
+            return 1
 
 
 def waiting_for_turn():
@@ -152,7 +157,7 @@ async def enpause(message):
 
 async def send_rss(msg: str, chat_id: int = None):
     try:
-        chat = chat_id or RSS_CHAT
+        chat = chat_id or conf.RSS_CHAT
         return await avoid_flood(tele.send_message, chat, msg)
     except Exception:
         await logger(Exception)
@@ -266,7 +271,7 @@ async def reply_message(message, text, quote=True):
 
 async def bc_msg(text, except_user=None, mlist=[]):
     """Broadcast a message to every registered user in bot and optionally return a list of the messages"""
-    for u in OWNER.split():
+    for u in conf.OWNER.split():
         if except_user == (u := int(u)):
             continue
         try:
@@ -284,10 +289,10 @@ async def bc_msg(text, except_user=None, mlist=[]):
         except Exception:
             pass
             # log(Exception)
-    if LOG_CHANNEL:
+    if conf.LOG_CHANNEL:
         try:
             e = await pyro.send_message(
-                LOG_CHANNEL,
+                conf.LOG_CHANNEL,
                 text,
             )
             mlist.append(e)
