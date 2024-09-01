@@ -690,7 +690,8 @@ async def simplecap(
             te = str(json.get("episodes"))
             te = "0" + str(te) if epi.startswith("0") else te
         except Exception:
-            log(Exception)
+            # log(Exception)
+            pass
 
         title = string.capwords(title)
         ar = txt_to_str(ar_file)
