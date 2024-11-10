@@ -1624,7 +1624,9 @@ async def dl_stat(e):
         name = dl.split("/")[1]
         input = (name[:45] + "…") if len(name) > 45 else name
         q = await qparse(name)
-        ans = f"📥 Downloading:\n{input}\n\n⭕ Current Size:\n{ov}\n\n\n{enmoji()}:\n{q}"
+        ans = (
+            f"📥 Downloading:\n{input}\n\n⭕ Current Size:\n{ov}\n\n\n{enmoji()}:\n{q}"
+        )
         await e.answer(ans, cache_time=0, alert=True)
     except AttributeError:
         ansa = "Oops! data of this button was lost,\n most probably due to restart.\nAnd as such the outdated message will be removed…"
